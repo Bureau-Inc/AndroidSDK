@@ -1,0 +1,3 @@
+include ':bureau-sdk-android'
+include ':app'
+rootProject.name = "AndroidSampleApp"

@@ -1,0 +1,69 @@
+plugins {
+    id 'com.android.library'
+}
+
+apply plugin: 'com.github.dcendents.android-maven'
+
+android {
+    compileSdkVersion 30
+    buildToolsVersion "30.0.2"
+
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 30
+        versionCode 1
+        versionName "1.0.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'com.google.android.material:material:1.1.0'
+    testImplementation 'junit:junit:4.+'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    implementation 'com.squareup.okhttp3:okhttp:3.9.0'
+
+}
+
+ext {
+    bintrayRepo = 'bureau-android-sdk'
+    bintrayName = 'bureau-sdk-android'
+
+    publishedGroupId = 'id.bureau'
+    libraryName = 'BureauSDKAndroid'
+    artifact = 'bureau-sdk-android'
+
+    libraryDescription = 'Bureau SDK Android'
+
+    siteUrl = 'https://github.com/Bureau-Inc/AndroidSDK'
+    gitUrl = 'https://github.com/Bureau-Inc/AndroidSDK.git'
+
+    libraryVersion = '1.0.0'
+
+    developerId = 'sarathkeyvalue'
+    developerName = 'Sarath Soman'
+    developerEmail = 'sarath.s@keyvalue.systems'
+
+    licenseName = 'The Apache Software License, Version 2.0'
+    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    allLicenses = ["Apache-2.0"]
+}
+
+apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
+apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/bintrayv1.gradle'
