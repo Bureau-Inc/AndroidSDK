@@ -28,3 +28,11 @@ AuthenticationStatus authenticationStatus = bureauAuth.authenticate(applicationC
 ```
 
 For an example SDK usage, please take a look [here](https://github.com/Bureau-Inc/AndroidSDK/blob/master/app/src/main/java/id/bureau/service/BureauService.java)
+
+## Minimum Android SDK Version
+
+LOLLIPOP || 21
+
+## Dependencies expected
+
+'com.squareup.okhttp3:okhttp:3.9.0' or compatible versions
