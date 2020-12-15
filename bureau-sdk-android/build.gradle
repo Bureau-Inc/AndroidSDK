@@ -43,13 +43,13 @@ dependencies {
 
 ext {
     bintrayRepo = 'bureau-android-sdk'
-    bintrayName = 'android-sdk'
+    bintrayName = 'bureau-sdk-android'
 
     publishedGroupId = 'id.bureau'
-    libraryName = 'BureauAndroidAuth'
-    artifact = 'android-sdk'
+    libraryName = 'BureauSDKAndroid'
+    artifact = 'bureau-sdk-android'
 
-    libraryDescription = 'Bureau Silent Authentication SDK'
+    libraryDescription = 'Bureau SDK Android'
 
     siteUrl = 'https://github.com/Bureau-Inc/AndroidSDK'
     gitUrl = 'https://github.com/Bureau-Inc/AndroidSDK.git'
