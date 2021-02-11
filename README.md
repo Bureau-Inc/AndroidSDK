@@ -3,7 +3,7 @@ Bureau SDK for Android
 
 ## Incude as a dependency
 ```Java
-implementation 'id.bureau:bureau-sdk-android:1.0.0'
+implementation 'id.bureau:bureau-sdk-android:1.1.0'
 ```
 
 ## SDK Initialization
@@ -14,7 +14,7 @@ BureauAuth bureauAuth = new BureauAuth.Builder()
     .clientId("Your Client Id")
     .build();
         //Other Options in builder are
-        //timeOutInMs - total timeout will be 2 * timeOutInMs
+        //timeOutInMs - total timeout
         //callbackUrl
 ```
 
