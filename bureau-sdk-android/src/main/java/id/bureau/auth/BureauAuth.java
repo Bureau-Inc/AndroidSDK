@@ -144,7 +144,7 @@ public class BureauAuth {
     }
 
     private void waitForWorkflowCompletion(AtomicInteger requestStatus, Date startTime) {
-        long maxDuration = timeoutInMs * 2;
+        long maxDuration = timeoutInMs;
         while (requestStatus.get() == 0) {
             Date currentTime = new Date();
             long duration = currentTime.getTime() - startTime.getTime();
