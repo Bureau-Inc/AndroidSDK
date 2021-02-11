@@ -28,8 +28,9 @@ public class BureauAuth {
     private final String host;
     private final int timeoutInMs;
     private final String callbackUrl;
+    private final boolean useFinalize;
 
-    BureauAuth(Mode mode, String clientId, int timeoutInMs, String callbackUrl) {
+    BureauAuth(Mode mode, String clientId, int timeoutInMs, String callbackUrl, boolean useFinalize) {
         if (null == mode) {
             this.mode = Mode.Production;
         } else {
@@ -45,12 +46,13 @@ public class BureauAuth {
         }
         this.clientId = clientId;
         if (timeoutInMs < 1) {
-            this.timeoutInMs = 25 * 100; //2.5sec
+            this.timeoutInMs = 4 * 1000; //4sec
         } else {
             this.timeoutInMs = timeoutInMs;
         }
         callbackUrl = null == callbackUrl ? null : callbackUrl.trim();
         this.callbackUrl = null == callbackUrl ? null : callbackUrl.length() == 0 ? null : callbackUrl;
+        this.useFinalize = useFinalize;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -157,7 +159,9 @@ public class BureauAuth {
         try {
             OkHttpClient okHttpClient = buildHttpClient(network);
             triggerInitiateFlow(correlationId, mobileNumber, okHttpClient);
-            triggerFinalizeFlow(correlationId, okHttpClient);
+            if (useFinalize) {
+                triggerFinalizeFlow(correlationId, okHttpClient);
+            }
         } catch (IOException e) {
             Log.i("BureauAuth", e.getMessage());
             throw new AuthenticationException(e.getMessage());
@@ -256,6 +260,7 @@ public class BureauAuth {
         private String clientId;
         private int timeOutInMs;
         private String callbackUrl;
+        private boolean useFinalize;
 
         public Builder mode(Mode mode) {
             this.mode = mode;
@@ -277,8 +282,13 @@ public class BureauAuth {
             return this;
         }
 
+        public Builder useFinalize(boolean useFinalize) {
+            this.useFinalize = useFinalize;
+            return this;
+        }
+
         public BureauAuth build() {
-            return new BureauAuth(mode, clientId, timeOutInMs, callbackUrl);
+            return new BureauAuth(mode, clientId, timeOutInMs, callbackUrl, useFinalize);
         }
     }
 
