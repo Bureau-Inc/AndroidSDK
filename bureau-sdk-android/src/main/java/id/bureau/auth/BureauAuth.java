@@ -20,6 +20,7 @@ import okhttp3.Call;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.Response;
 
 
 public class BureauAuth {
@@ -162,6 +163,9 @@ public class BureauAuth {
             if (useFinalize) {
                 triggerFinalizeFlow(correlationId, okHttpClient);
             }
+        } catch (AuthenticationException e) {
+            Log.i("BureauAuth", e.getMessage());
+            throw e;
         } catch (IOException e) {
             Log.i("BureauAuth", e.getMessage());
             throw new AuthenticationException(e.getMessage());
@@ -196,7 +200,26 @@ public class BureauAuth {
                 .get()
                 .build();
         Call call = okHttpClient.newCall(request);
-        call.execute();
+        Response response = null;
+        try {
+            response = call.execute();
+            closeResponse(response);
+        } catch (IOException e) {
+            closeResponse(response);
+            throw new AuthenticationException("Unable to contact the server. " + e.getMessage());
+        }
+    }
+
+    private void closeResponse(Response response) throws IOException {
+        if (null != response && null != response.body()) {
+            try {
+                response.body().bytes();
+                response.body().close();
+            } catch (IOException e) {
+                response.body().close();
+                throw e;
+            }
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
