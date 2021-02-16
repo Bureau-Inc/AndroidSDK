@@ -3,7 +3,7 @@ Bureau SDK for Android
 
 ## Incude as a dependency
 ```Java
-implementation 'id.bureau:bureau-sdk-android:1.1.0'
+implementation 'id.bureau:bureau-sdk-android:1.1.1'
 ```
 
 ## SDK Initialization
