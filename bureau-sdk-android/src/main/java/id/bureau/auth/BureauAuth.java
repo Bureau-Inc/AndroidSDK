@@ -13,6 +13,8 @@ import androidx.annotation.RequiresApi;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -76,6 +78,37 @@ public class BureauAuth {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             connectivityManager.requestNetwork(networkRequest,
                     registerNetworkCallbackForOPlusDevices(correlationId, mobileNumber, connectivityManager, requestStatus), timeoutInMs);
+
+        } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M) {
+            //https://stackoverflow.com/questions/32185628/connectivitymanager-requestnetwork-in-android-6-0
+            // Android M has a bug where requestNetwork never works, hence instead of requestNetwork,
+            // call api directly if on cellular network else fail the authenticate request
+
+            Network activeNetworkInfo = connectivityManager.getActiveNetwork();
+            if (activeNetworkInfo != null) {
+                NetworkCapabilities networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetworkInfo);
+                if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                    // move work on worker thread and return
+                    ExecutorService executorService = Executors.newFixedThreadPool(1);
+                    executorService.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Log.i("BureauAuth", "Android M trigger Auth");
+                                triggerAuthenticationFlow(correlationId, mobileNumber, activeNetworkInfo);
+                                //Set status
+                                requestStatus.compareAndSet(0, 1); // 1: Completed
+                            } catch (AuthenticationException e) {
+                                Log.e("BureauAuth", "Android M Auth Exception");
+                                requestStatus.compareAndSet(0, -3); //-3 : ExceptionOnAuthenticate
+                            }
+                        }
+                    });
+                    return;
+                }
+            }
+            Log.e("BureauAuth", "Android M No network");
+            requestStatus.compareAndSet(0, -2); // -2 : NetworkUnavailable
         } else {
             connectivityManager.requestNetwork(networkRequest, registerCallbackForOMinusDevices(correlationId, mobileNumber, requestStatus));
         }
