@@ -64,7 +64,6 @@ public class BureauAuth {
         callbackUrl = null == callbackUrl ? null : callbackUrl.trim();
         this.callbackUrl = null == callbackUrl ? null : callbackUrl.length() == 0 ? null : callbackUrl;
         this.useFinalize = useFinalize;
-
     }
 
     public void sendEvent(MixpanelAPI mMixpanel, String event, String key, String value) {
@@ -111,6 +110,7 @@ public class BureauAuth {
         mixpanel = MixpanelAPI.getInstance(context, "6c8eb4a72b5ea2f27850ce9e99ed31d4");
         setPackageName(mixpanel, context.getPackageName());
         mixpanel.getPeople().identify(sha256(String.valueOf(mobileNumber)));
+        mixpanel.identify(sha256(String.valueOf(mobileNumber)));
         mixpanel.timeEvent("authenticate");
 
         final AtomicInteger requestStatus = new AtomicInteger(0);
@@ -175,7 +175,7 @@ public class BureauAuth {
             public void onUnavailable() {
                 super.onUnavailable();
                 requestStatus.compareAndSet(0, -2);
-                if(mixpanel != null) {
+                if (mixpanel != null) {
                     mixpanel.track("onUnavailable");
                 }
             }
@@ -185,7 +185,7 @@ public class BureauAuth {
                 super.onAvailable(network);
                 try {
                     triggerAuthenticationFlow(correlationId, mobileNumber, network);
-                    if(mixpanel != null) {
+                    if (mixpanel != null) {
                         mixpanel.track("available");
                     }
                     requestStatus.compareAndSet(0, 1);
@@ -207,7 +207,7 @@ public class BureauAuth {
                     requestStatus.compareAndSet(0, -1);
                 }
                 requestStatus.compareAndSet(0, -2);
-                if(mixpanel != null) {
+                if (mixpanel != null) {
                     mixpanel.track("onUnavailable");
                 }
             }
@@ -215,7 +215,7 @@ public class BureauAuth {
             @Override
             public void onAvailable(Network network) {
                 super.onAvailable(network);
-                if(mixpanel != null) {
+                if (mixpanel != null) {
                     mixpanel.track("available");
                 }
                 try {
