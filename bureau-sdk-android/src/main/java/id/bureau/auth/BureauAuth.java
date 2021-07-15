@@ -11,7 +11,13 @@ import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
+import com.mixpanel.android.mpmetrics.MixpanelAPI;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
+import java.security.MessageDigest;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,6 +38,8 @@ public class BureauAuth {
     private final int timeoutInMs;
     private final String callbackUrl;
     private final boolean useFinalize;
+
+    private MixpanelAPI mixpanel = null;
 
     BureauAuth(Mode mode, String clientId, int timeoutInMs, String callbackUrl, boolean useFinalize) {
         if (null == mode) {
@@ -56,14 +64,60 @@ public class BureauAuth {
         callbackUrl = null == callbackUrl ? null : callbackUrl.trim();
         this.callbackUrl = null == callbackUrl ? null : callbackUrl.length() == 0 ? null : callbackUrl;
         this.useFinalize = useFinalize;
+
+    }
+
+    public void sendEvent(MixpanelAPI mMixpanel, String event, String key, String value) {
+        if (mMixpanel != null) {
+            JSONObject properties = new JSONObject();
+            try {
+                properties.put(key, value);
+            } catch (JSONException e) {
+                Log.i("BureauAuth", "JSONException");
+            }
+            mMixpanel.track(event, properties);
+        }
+    }
+
+    public void setPackageName(MixpanelAPI mMixpanel, String value) {
+        JSONObject properties = new JSONObject();
+        try {
+            properties.put("packagename", value);
+        } catch (JSONException e) {
+            Log.i("BureauAuth", "JSONException");
+        }
+        mMixpanel.registerSuperPropertiesOnce(properties);
+    }
+
+    private String sha256(String s) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            md.update(s.getBytes());
+            byte[] bytes = md.digest();
+            StringBuffer buffer = new StringBuffer();
+            for (int i = 0; i < bytes.length; i++) {
+                String tmp = Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1);
+                buffer.append(tmp);
+            }
+            return buffer.toString();
+        } catch (Exception e) {
+            return "";
+        }
+
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public AuthenticationStatus authenticate(Context context, final String correlationId, final long mobileNumber) {
+        mixpanel = MixpanelAPI.getInstance(context, "6c8eb4a72b5ea2f27850ce9e99ed31d4");
+        setPackageName(mixpanel, context.getPackageName());
+        mixpanel.getPeople().identify(sha256(String.valueOf(mobileNumber)));
+        mixpanel.timeEvent("authenticate");
+
         final AtomicInteger requestStatus = new AtomicInteger(0);
         Date startTime = new Date();
         triggerAuthenticationFlowViaConnectivityManager(context, correlationId, mobileNumber, requestStatus);
         waitForWorkflowCompletion(requestStatus, startTime);
+        sendEvent(mixpanel, "authenticate", "status", buildAuthenticationStatus(requestStatus).getMessage());
         return buildAuthenticationStatus(requestStatus);
     }
 
@@ -121,6 +175,9 @@ public class BureauAuth {
             public void onUnavailable() {
                 super.onUnavailable();
                 requestStatus.compareAndSet(0, -2);
+                if(mixpanel != null) {
+                    mixpanel.track("onUnavailable");
+                }
             }
 
             @Override
@@ -128,6 +185,9 @@ public class BureauAuth {
                 super.onAvailable(network);
                 try {
                     triggerAuthenticationFlow(correlationId, mobileNumber, network);
+                    if(mixpanel != null) {
+                        mixpanel.track("available");
+                    }
                     requestStatus.compareAndSet(0, 1);
                 } catch (AuthenticationException e) {
                     requestStatus.compareAndSet(0, -3);
@@ -147,11 +207,17 @@ public class BureauAuth {
                     requestStatus.compareAndSet(0, -1);
                 }
                 requestStatus.compareAndSet(0, -2);
+                if(mixpanel != null) {
+                    mixpanel.track("onUnavailable");
+                }
             }
 
             @Override
             public void onAvailable(Network network) {
                 super.onAvailable(network);
+                if(mixpanel != null) {
+                    mixpanel.track("available");
+                }
                 try {
                     triggerAuthenticationFlow(correlationId, mobileNumber, network);
                     requestStatus.compareAndSet(0, 1);
@@ -300,7 +366,7 @@ public class BureauAuth {
         ExceptionOnAuthenticate("Exception occurred while trying to authenticate"),
         UnknownState("Unknown authentication state");
 
-        private String message;
+        private final String message;
 
         AuthenticationStatus(String message) {
             this.message = message;
@@ -349,7 +415,7 @@ public class BureauAuth {
     }
 
     public static class AuthenticationException extends RuntimeException {
-        private String message;
+        private final String message;
 
         public AuthenticationException(String message) {
             this.message = message;
