@@ -66,19 +66,30 @@ public class BureauAuth {
         this.useFinalize = useFinalize;
     }
 
-    public void sendEvent(MixpanelAPI mMixpanel, String event, String key, String value) {
-        if (mMixpanel != null) {
+    private void sendEvent(String event, String key, String value) {
+        if (mixpanel != null) {
             JSONObject properties = new JSONObject();
             try {
                 properties.put(key, value);
             } catch (JSONException e) {
                 Log.i("BureauAuth", "JSONException");
             }
-            mMixpanel.track(event, properties);
+            synchronized (mixpanel) {
+                mixpanel.track(event, properties);
+            }
         }
     }
 
-    public void setPackageName(MixpanelAPI mMixpanel, String value) {
+    private void sendEvent(String event){
+
+        if(mixpanel != null){
+            synchronized (mixpanel){
+                mixpanel.track(event);
+            }
+        }
+    }
+
+    private void setPackageName(MixpanelAPI mMixpanel, String value) {
         JSONObject properties = new JSONObject();
         try {
             properties.put("packagename", value);
@@ -108,16 +119,19 @@ public class BureauAuth {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public AuthenticationStatus authenticate(Context context, final String correlationId, final long mobileNumber) {
         mixpanel = MixpanelAPI.getInstance(context, "6c8eb4a72b5ea2f27850ce9e99ed31d4");
-        setPackageName(mixpanel, context.getPackageName());
-        mixpanel.getPeople().identify(sha256(String.valueOf(mobileNumber)));
-        mixpanel.identify(sha256(String.valueOf(mobileNumber)));
-        mixpanel.timeEvent("authenticate");
+
+        synchronized (mixpanel) {
+            setPackageName(mixpanel, context.getPackageName());
+            mixpanel.getPeople().identify(sha256(String.valueOf(mobileNumber)));
+            mixpanel.identify(sha256(String.valueOf(mobileNumber)));
+            mixpanel.timeEvent("authenticate");
+        }
 
         final AtomicInteger requestStatus = new AtomicInteger(0);
         Date startTime = new Date();
         triggerAuthenticationFlowViaConnectivityManager(context, correlationId, mobileNumber, requestStatus);
         waitForWorkflowCompletion(requestStatus, startTime);
-        sendEvent(mixpanel, "authenticate", "status", buildAuthenticationStatus(requestStatus).getMessage());
+        sendEvent("authenticate", "status", buildAuthenticationStatus(requestStatus).getMessage());
         return buildAuthenticationStatus(requestStatus);
     }
 
@@ -175,9 +189,7 @@ public class BureauAuth {
             public void onUnavailable() {
                 super.onUnavailable();
                 requestStatus.compareAndSet(0, -2);
-                if (mixpanel != null) {
-                    mixpanel.track("onUnavailable");
-                }
+                    sendEvent("onUnavailable");
             }
 
             @Override
@@ -185,9 +197,7 @@ public class BureauAuth {
                 super.onAvailable(network);
                 try {
                     triggerAuthenticationFlow(correlationId, mobileNumber, network);
-                    if (mixpanel != null) {
-                        mixpanel.track("available");
-                    }
+                    sendEvent("available");
                     requestStatus.compareAndSet(0, 1);
                 } catch (AuthenticationException e) {
                     requestStatus.compareAndSet(0, -3);
@@ -207,17 +217,14 @@ public class BureauAuth {
                     requestStatus.compareAndSet(0, -1);
                 }
                 requestStatus.compareAndSet(0, -2);
-                if (mixpanel != null) {
-                    mixpanel.track("onUnavailable");
-                }
+                sendEvent("onUnavailable");
+
             }
 
             @Override
             public void onAvailable(Network network) {
                 super.onAvailable(network);
-                if (mixpanel != null) {
-                    mixpanel.track("available");
-                }
+                sendEvent("available");
                 try {
                     triggerAuthenticationFlow(correlationId, mobileNumber, network);
                     requestStatus.compareAndSet(0, 1);
