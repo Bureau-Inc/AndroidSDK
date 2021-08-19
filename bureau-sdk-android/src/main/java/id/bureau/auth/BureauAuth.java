@@ -1,6 +1,7 @@
 package id.bureau.auth;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -87,10 +88,11 @@ public class BureauAuth {
         }
     }
 
-    private void setPackageName(MixpanelAPI mMixpanel, String value) {
+    private void setPackageName(MixpanelAPI mMixpanel, String value, boolean debuggable) {
         JSONObject properties = new JSONObject();
         try {
             properties.put("packagename", value);
+            properties.put("debuggable", debuggable);
         } catch (JSONException e) {
             Log.i("BureauAuth", "JSONException");
         }
@@ -114,11 +116,14 @@ public class BureauAuth {
 
     }
 
+
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public AuthenticationStatus authenticate(Context context, final String correlationId, final long mobileNumber) {
         mixpanel = MixpanelAPI.getInstance(context, "6c8eb4a72b5ea2f27850ce9e99ed31d4");
+        boolean isDebuggable = (0 != (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE));
+
         synchronized (mixpanel) {
-            setPackageName(mixpanel, context.getPackageName());
+            setPackageName(mixpanel, context.getPackageName(), isDebuggable);
             mixpanel.getPeople().identify(sha256(String.valueOf(mobileNumber)));
             mixpanel.identify(sha256(String.valueOf(mobileNumber)));
             mixpanel.timeEvent("authenticate");
@@ -126,29 +131,24 @@ public class BureauAuth {
 
         final AtomicInteger requestStatus = new AtomicInteger(0);
         Date startTime = new Date();
-        triggerAuthenticationFlowViaConnectivityManager(context, correlationId, mobileNumber, requestStatus);
+
+        //some devices do not support request network api call. To mitigate we first do a direct auth and then retry via RequestNetwork api
+        boolean status = triggerAuthenticationFlowDirect(context, correlationId, mobileNumber, requestStatus);
+
+        if (!status) {
+            triggerAuthenticationFlowViaConnectivityManager(context, correlationId, mobileNumber, requestStatus);
+        }
         waitForWorkflowCompletion(requestStatus, startTime);
         sendEvent("authenticate", "status", buildAuthenticationStatus(requestStatus).getMessage());
         return buildAuthenticationStatus(requestStatus);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private void triggerAuthenticationFlowViaConnectivityManager(Context context, final String correlationId, final long mobileNumber, final AtomicInteger requestStatus) {
+    private boolean triggerAuthenticationFlowDirect(Context context, String correlationId, long mobileNumber, AtomicInteger requestStatus) {
         final ConnectivityManager connectivityManager = (ConnectivityManager)
                 context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkRequest networkRequest = new NetworkRequest.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            connectivityManager.requestNetwork(networkRequest,
-                    registerNetworkCallbackForOPlusDevices(correlationId, mobileNumber, connectivityManager, requestStatus), timeoutInMs);
 
-        } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M) {
-            //https://stackoverflow.com/questions/32185628/connectivitymanager-requestnetwork-in-android-6-0
-            // Android M has a bug where requestNetwork never works, hence instead of requestNetwork,
-            // call api directly if on cellular network else fail the authenticate request
-
+        //call auth directly if cellular network is
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Network activeNetworkInfo = connectivityManager.getActiveNetwork();
             if (activeNetworkInfo != null) {
                 NetworkCapabilities networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetworkInfo);
@@ -159,6 +159,7 @@ public class BureauAuth {
                         try {
                             Log.i("BureauAuth", "Android M trigger Auth");
                             triggerAuthenticationFlow(correlationId, mobileNumber, activeNetworkInfo);
+                            sendEvent("direct available");
                             //Set status
                             requestStatus.compareAndSet(0, 1); // 1: Completed
                         } catch (AuthenticationException e) {
@@ -166,15 +167,37 @@ public class BureauAuth {
                             requestStatus.compareAndSet(0, -3); //-3 : ExceptionOnAuthenticate
                         }
                     });
-                    return;
+                    return true;
                 }
             }
+        }
+        return false;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private void triggerAuthenticationFlowViaConnectivityManager(Context context, final String correlationId, final long mobileNumber, final AtomicInteger requestStatus) {
+        final ConnectivityManager connectivityManager = (ConnectivityManager)
+                context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkRequest networkRequest = new NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            connectivityManager.requestNetwork(networkRequest,
+                    registerNetworkCallbackForOPlusDevices(correlationId, mobileNumber, connectivityManager, requestStatus), timeoutInMs);
+
+        } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M) {
+            //https://stackoverflow.com/questions/32185628/connectivitymanager-requestnetwork-in-android-6-0
+            // Android M has a bug where requestNetwork never works, hence instead of requestNetwork,
+            // call api directly if on cellular network else fail the authenticate request
             Log.e("BureauAuth", "Android M No network");
             requestStatus.compareAndSet(0, -2); // -2 : NetworkUnavailable
         } else {
             connectivityManager.requestNetwork(networkRequest, registerCallbackForOMinusDevices(correlationId, mobileNumber, requestStatus));
         }
     }
+
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private ConnectivityManager.NetworkCallback registerCallbackForOMinusDevices(final String correlationId, final long mobileNumber, final AtomicInteger requestStatus) {
@@ -183,7 +206,6 @@ public class BureauAuth {
             public void onUnavailable() {
                 super.onUnavailable();
                 requestStatus.compareAndSet(0, -2);
-
                 sendEvent("onUnavailable");
             }
 
@@ -192,9 +214,7 @@ public class BureauAuth {
                 super.onAvailable(network);
                 try {
                     triggerAuthenticationFlow(correlationId, mobileNumber, network);
-
                     sendEvent("available");
-
                     requestStatus.compareAndSet(0, 1);
                 } catch (AuthenticationException e) {
                     requestStatus.compareAndSet(0, -3);
