@@ -3,8 +3,18 @@ Bureau SDK for Android
 
 ## Incude as a dependency
 ```Java
-implementation 'id.bureau:bureau-sdk-android:1.1.1'
+implementation 'id.bureau:AndroidSDK:1.2'
 ```
+```Gradle
+
+allprojects {
+ repositories {
+    jcenter()
+    maven { url "https://jitpack.io" }
+ }
+}
+```
+
 
 ## SDK Initialization
 
