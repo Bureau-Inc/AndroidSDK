@@ -27,7 +27,6 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginLeft="16dp"
-        android:onClick="sendMessage"
         android:text="Login"
         app:layout_constraintBaseline_toBaselineOf="@+id/msisdn"
         app:layout_constraintEnd_toEndOf="parent"

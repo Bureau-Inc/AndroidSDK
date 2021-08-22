@@ -14,7 +14,7 @@ import java.util.UUID;
 import id.bureau.util.AsyncUtils;
 import id.bureau.service.BureauService;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
     private BureauService bureauService = new BureauService();
 
@@ -24,10 +24,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        findViewById(R.id.login).setOnClickListener( this);
     }
 
+
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    public void sendMessage(View view) {
+    @Override
+    public void onClick(View v) {
         final Intent intent = new Intent(this, ResultActivity.class);
         EditText msisdn = (EditText) findViewById(R.id.msisdn);
         final String message = msisdn.getText().toString();
