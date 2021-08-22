@@ -1,12 +1,10 @@
 Bureau SDK for Android
 ==========================================
 
-## Incude as a dependency
-```Java
-implementation 'id.bureau:AndroidSDK:1.2'
-```
-```Gradle
+## Step 1. Add the JitPack repository to your build file
+Add it in your root build.gradle at the end of repositories:
 
+```Gradle
 allprojects {
  repositories {
     jcenter()
@@ -14,7 +12,24 @@ allprojects {
  }
 }
 ```
+**or**
+if your repositories are managed from settings.gradle
 
+```Gradle
+dependencyResolutionManagement {
+   repositories {
+      ...
+      maven { url "https://jitpack.io" }
+    }
+}
+```
+
+## Step 2. Add the dependency
+
+
+```Java
+implementation 'id.bureau:AndroidSDK:1.3.2'
+```
 
 ## SDK Initialization
 
