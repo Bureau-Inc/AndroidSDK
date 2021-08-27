@@ -68,3 +68,21 @@ LOLLIPOP || 21
 
 'com.squareup.okhttp3:okhttp:3.9.0' or compatible versions,
 ‘com.mixpanel.android:mixpanel-android:5.9.1’ 
+
+## Manifest changes
+
+```
+<application
+    android:usesCleartextTraffic="true"
+```
+
+or if you are using network config
+
+```
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">PLEASE CONTACT BUREAU TO GET DOMAIN</domain>
+    </domain-config>
+</network-security-config>
+```
