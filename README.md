@@ -81,8 +81,8 @@ or if you are using network config
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">PLEASE CONTACT BUREAU TO GET DOMAIN</domain>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">PLEASE CONTACT BUREAU TO GET DOMAIN</domain>
     </domain-config>
 </network-security-config>
 ```
