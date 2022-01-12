@@ -28,7 +28,7 @@ dependencyResolutionManagement {
 
 
 ```Java
-implementation 'id.bureau:AndroidSDK:1.3.2'
+implementation 'id.bureau:AndroidSDK:1.3.6'
 ```
 
 ## SDK Initialization
