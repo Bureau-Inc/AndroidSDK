@@ -67,7 +67,7 @@ LOLLIPOP || 21
 ## Dependencies expected
 
 'com.squareup.okhttp3:okhttp:3.9.0' or compatible versions,
-‘com.mixpanel.android:mixpanel-android:5.9.1’ 
+‘com.mixpanel.android:mixpanel-android:5.9.6’ 
 
 ## Manifest changes
 
