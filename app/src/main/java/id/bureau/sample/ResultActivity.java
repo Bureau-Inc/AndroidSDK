@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.TextView;
 
+import com.neoeyed.sdk.neoEYED;
+
 public class ResultActivity extends AppCompatActivity {
 
     @Override
@@ -18,5 +20,9 @@ public class ResultActivity extends AppCompatActivity {
 
         TextView tv = findViewById(R.id.result);
         tv.setText(message);
+
+
+        neoEYED.startActivity(neoEYED.ActivityLabel.registration);
+        startActivity(new Intent(ResultActivity.this, SampleActivity.class));
     }
 }

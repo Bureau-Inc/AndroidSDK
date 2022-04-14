@@ -10,6 +10,8 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.neoeyed.sdk.neoEYED;
+
 import java.util.UUID;
 import id.bureau.util.AsyncUtils;
 import id.bureau.service.BureauService;
@@ -25,6 +27,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         findViewById(R.id.login).setOnClickListener( this);
+        initializeNeoEyed();
+    }
+
+    private void initializeNeoEyed() {
+        neoEYED.init(this, null);
+        neoEYED.startActivity(neoEYED.ActivityLabel.login);
     }
 
 

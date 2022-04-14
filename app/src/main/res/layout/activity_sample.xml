@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".SampleActivity">
+
+    <EditText
+        android:id="@+id/userID"
+        android:layout_width="match_parent"
+        android:layout_height="150px"
+        android:layout_marginTop="150px"
+        android:hint="user ID e.g. arindam"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/firstName"
+        android:layout_width="match_parent"
+        android:layout_height="150px"
+        android:layout_marginTop="100px"
+        android:hint="first name e.g. Arindam"
+        app:layout_constraintTop_toBottomOf="@+id/userID" />
+
+    <EditText
+        android:id="@+id/lastName"
+        android:layout_width="match_parent"
+        android:layout_height="150px"
+        android:layout_marginTop="100px"
+        android:hint="last name e.g. Das"
+        app:layout_constraintTop_toBottomOf="@+id/firstName" />
+
+    <EditText
+        android:id="@+id/mailID"
+        android:layout_width="match_parent"
+        android:layout_height="150px"
+        android:layout_marginTop="100px"
+        android:hint="mail ID e.g. abc@example.com"
+        app:layout_constraintTop_toBottomOf="@+id/lastName" />
+
+    <Button
+        android:id="@+id/submitButton"
+        android:layout_width="300px"
+        android:layout_height="150px"
+        android:layout_marginTop="50px"
+        android:text="Submit"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/mailID" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
