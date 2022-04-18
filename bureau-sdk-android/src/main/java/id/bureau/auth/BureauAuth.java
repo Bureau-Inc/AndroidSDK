@@ -13,6 +13,8 @@ import android.util.Log;
 import androidx.annotation.RequiresApi;
 
 import com.mixpanel.android.mpmetrics.MixpanelAPI;
+import com.sardine.ai.mdisdk.MobileIntelligence;
+import com.sardine.ai.mdisdk.Options;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -116,6 +118,45 @@ public class BureauAuth {
 
     }
 
+    private void initializeSardineSdk(String sessionKey, Context context) {
+        Options option = new Options.Builder()
+                .setClientID("5681f9d4-42fd-4d99-a58a-d1f632ca4f29") //hard coded for testing
+                .setSessionKey(sessionKey)
+                .setEnvironment(Options.ENV_SANDBOX) //Options.ENV_PRODUCTION
+                .build();
+        MobileIntelligence.init(context, option);
+    }
+
+    private void submitDataToSardineSdk() {
+        MobileIntelligence.submitData(new MobileIntelligence.Callback<MobileIntelligence.SubmitResponse>() {
+            @Override
+            public void onSuccess(MobileIntelligence.SubmitResponse r) {
+                Log.d("sardine", "submit data reponse: " + r);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                Log.d("sardine", "submit data error: " + e);
+            }
+        });
+    }
+
+    private void doSilentAuthWithSardineSdk(String mobileNumber) {
+        MobileIntelligence.silentAuth(
+                mobileNumber,
+                new MobileIntelligence.Callback<MobileIntelligence.SilentAuthResponse>() {
+                    @Override
+                    public void onSuccess(MobileIntelligence.SilentAuthResponse silentAuthResponse) {
+                        Log.d("sardine", "silent auth response: " + silentAuthResponse);
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        Log.d("sardine", "silent auth error: " + e);
+                    }
+                });
+
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public AuthenticationStatus authenticate(Context context, final String correlationId, final long mobileNumber) {
@@ -128,6 +169,11 @@ public class BureauAuth {
             mixpanel.identify(sha256(String.valueOf(mobileNumber)));
             mixpanel.timeEvent("authenticate");
         }
+
+        Log.d("Arindam", "mobile number: " + mobileNumber);
+        initializeSardineSdk(correlationId, context);
+        submitDataToSardineSdk();
+        doSilentAuthWithSardineSdk(Long.toString(mobileNumber));
 
         final AtomicInteger requestStatus = new AtomicInteger(0);
         Date startTime = new Date();
