@@ -3,6 +3,7 @@ package id.bureau.sample;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Application;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
@@ -13,6 +14,7 @@ import android.widget.Toast;
 import java.util.UUID;
 import id.bureau.util.AsyncUtils;
 import id.bureau.service.BureauService;
+import io.requestly.android.core.Requestly;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
@@ -25,6 +27,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         findViewById(R.id.login).setOnClickListener( this);
+
+      //  new Requestly.Builder((Application) getApplicationContext(), "ciIUksMwVAxcH4m3c16Q").build();
     }
 
 

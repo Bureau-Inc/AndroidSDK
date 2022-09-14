@@ -12,7 +12,10 @@ import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
+import com.bugfender.sdk.Bugfender;
 import com.mixpanel.android.mpmetrics.MixpanelAPI;
+import com.moczul.ok2curl.CurlInterceptor;
+import com.moczul.ok2curl.logger.Loggable;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -24,12 +27,21 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
+
+import io.requestly.android.okhttp.api.RQInterceptor;
+import io.requestly.android.okhttp.api.RQCollector;
 
 import okhttp3.Call;
 import okhttp3.HttpUrl;
+import okhttp3.Interceptor;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
+import okhttp3.logging.HttpLoggingInterceptor;
+import okio.Buffer;
 
 
 public class BureauAuth {
@@ -40,6 +52,8 @@ public class BureauAuth {
     private final boolean useFinalize;
 
     private MixpanelAPI mixpanel = null;
+
+    private Context appContext = null;
 
     BureauAuth(Mode mode, String clientId, int timeoutInMs, String callbackUrl, boolean useFinalize) {
         Mode mode1;
@@ -119,6 +133,9 @@ public class BureauAuth {
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public AuthenticationStatus authenticate(Context context, final String correlationId, final long mobileNumber) {
+        //setting up app context globally
+        appContext = context;
+//        DataUtils
         mixpanel = MixpanelAPI.getInstance(context, "6c8eb4a72b5ea2f27850ce9e99ed31d4");
         boolean isDebuggable = (0 != (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE));
 
@@ -331,9 +348,48 @@ public class BureauAuth {
             }
         }
     }
+    public class LoggingInterceptor implements Interceptor {
+        @Override
+        public Response intercept(Chain chain) throws IOException {
+            Request request = chain.request();
+
+            long t1 = System.nanoTime();
+            Log.d("Nandeesh", String.format("--> Sending request %s on %s%n%s", request.url(), chain.connection(), request.headers()));
+            Bugfender.d("Nandeesh", String.format("--> Sending request %s on %s%n%s", request.url(), chain.connection(), request.headers()));
+
+            Buffer requestBuffer = new Buffer();
+            if(request.body() != null)
+            request.body().writeTo(requestBuffer);
+            Log.d("Nandeesh2", requestBuffer.readUtf8());
+            Bugfender.d("Nandeesh2", requestBuffer.readUtf8());
+
+            Response response = chain.proceed(request);
+
+            long t2 = System.nanoTime();
+            Log.d("Nandeesh", String.format("<-- Received response for %s in %.1fms%n%s", response.request().url(), (t2 - t1) / 1e6d, response.headers()));
+
+            Bugfender.d("Nandeesh", String.format("<-- Received response for %s in %.1fms%n%s", response.request().url(), (t2 - t1) / 1e6d, response.headers()));
+
+
+            MediaType contentType = response.body().contentType();
+            String content = response.body().string();
+            Log.d("Nandeesh", content);
+            Bugfender.f("Nandeesh", content);
+
+            ResponseBody wrappedBody = ResponseBody.create(contentType, content);
+            return response.newBuilder().body(wrappedBody).build();
+        }
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private OkHttpClient buildHttpClient(Network network) {
+      //  RQCollector collector = new RQCollector(appContext);
+        HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
+        interceptor.level(HttpLoggingInterceptor.Level.BODY);
+        /*RQInterceptor rqInterceptor = new RQInterceptor.Builder(appContext)
+                .collector(collector)
+                .build();*/
+
         return new OkHttpClient.Builder()
                 .followRedirects(true)
                 .followSslRedirects(true)
@@ -341,7 +397,20 @@ public class BureauAuth {
                 .connectTimeout(timeoutInMs, TimeUnit.MILLISECONDS)
                 .writeTimeout(timeoutInMs, TimeUnit.MILLISECONDS)
                 .readTimeout(timeoutInMs, TimeUnit.MILLISECONDS)
+                .addInterceptor(interceptor)
+                .addInterceptor(new LoggingInterceptor())
+                .addInterceptor(new CurlInterceptor(message -> {
+                    Log.d("OKCURL", "what is curl: " + message);
+                }))
+              //  .addInterceptor(rqInterceptor)
+
+//                .addInterceptor(CurlInterceptor(object : Logger {
+//            override fun log(message: String) {
+//                Log.v("Ok2Curl", message)
+//            }
+//        }))
                 .build();
+
     }
 
     private HttpUrl buildInitiateUrl(String correlationId, long mobileNumber) {
@@ -351,8 +420,11 @@ public class BureauAuth {
                 .addPathSegments("v2/auth/initiate")
                 .addQueryParameter("clientId", clientId)
                 .addQueryParameter("correlationId", correlationId)
-                .addQueryParameter("callbackUrl", callbackUrl)
-                .addQueryParameter("msisdn", String.valueOf(mobileNumber))
+//                .addQueryParameter("callbackUrl", callbackUrl)
+                .addQueryParameter("countryCode", "IN")
+                .addQueryParameter("mobile", String.valueOf(mobileNumber))
+//                .addQueryParameter("mobile", "919742238246")
+
                 .build();
     }
 

@@ -24,7 +24,7 @@ public class BureauService {
     public String authenticate(Context applicationContext, String correlationId, String message) {
         BureauAuth bureauAuth = new BureauAuth.Builder()
                 .mode(BureauAuth.Mode.Sandbox)
-                .clientId("Your Client Id")
+                .clientId("e66c4b3f-1481-4602-81ce-41f32ffcd976")
                 .build();
         String resultMessage = "";
         try {
