@@ -10,8 +10,6 @@ import android.net.NetworkRequest;
 import android.os.Build;
 import android.util.Log;
 
-import androidx.annotation.RequiresApi;
-
 import com.mixpanel.android.mpmetrics.MixpanelAPI;
 
 import org.json.JSONException;
@@ -117,7 +115,6 @@ public class BureauAuth {
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public AuthenticationStatus authenticate(Context context, final String correlationId, final long mobileNumber) {
         mixpanel = MixpanelAPI.getInstance(context, "6c8eb4a72b5ea2f27850ce9e99ed31d4");
         boolean isDebuggable = (0 != (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE));
@@ -174,7 +171,6 @@ public class BureauAuth {
         return false;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void triggerAuthenticationFlowViaConnectivityManager(Context context, final String correlationId, final long mobileNumber, final AtomicInteger requestStatus) {
         final ConnectivityManager connectivityManager = (ConnectivityManager)
                 context.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -199,7 +195,6 @@ public class BureauAuth {
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private ConnectivityManager.NetworkCallback registerCallbackForOMinusDevices(final String correlationId, final long mobileNumber, final AtomicInteger requestStatus) {
         return new ConnectivityManager.NetworkCallback() {
             @Override
@@ -223,7 +218,6 @@ public class BureauAuth {
         };
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private ConnectivityManager.NetworkCallback registerNetworkCallbackForOPlusDevices(final String correlationId, final long mobileNumber, final ConnectivityManager connectivityManager, final AtomicInteger requestStatus) {
         return new ConnectivityManager.NetworkCallback() {
             @Override
@@ -267,17 +261,15 @@ public class BureauAuth {
     }
 
     private void waitForWorkflowCompletion(AtomicInteger requestStatus, Date startTime) {
-        long maxDuration = timeoutInMs;
         while (requestStatus.get() == 0) {
             Date currentTime = new Date();
             long duration = currentTime.getTime() - startTime.getTime();
-            if (duration >= maxDuration) {
+            if (duration >= (long) timeoutInMs) {
                 break;
             }
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void triggerAuthenticationFlow(String correlationId, long mobileNumber, Network network) {
         try {
             OkHttpClient okHttpClient = buildHttpClient(network);
@@ -332,7 +324,6 @@ public class BureauAuth {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private OkHttpClient buildHttpClient(Network network) {
         return new OkHttpClient.Builder()
                 .followRedirects(true)
