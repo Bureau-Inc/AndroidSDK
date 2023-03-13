@@ -28,6 +28,7 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.logging.HttpLoggingInterceptor;
 
 
 public class BureauAuth {
@@ -36,11 +37,13 @@ public class BureauAuth {
     private final int timeoutInMs;
     private final String callbackUrl;
     private final boolean useFinalize;
+  private Mode mode;
 
     private MixpanelAPI mixpanel = null;
 
     BureauAuth(Mode mode, String clientId, int timeoutInMs, String callbackUrl, boolean useFinalize) {
         Mode mode1;
+        this.mode = mode;
         if (null == mode) {
             mode1 = Mode.Production;
         } else {
@@ -284,8 +287,28 @@ public class BureauAuth {
                     } else if (response.code() == 401) {
                         requestStatus.compareAndSet(0, -3);
                         Log.i("BureauAuth", "Auth failed due to Authentication Exception");
-                    } else
+                    } else if(response.code() == 500) {
+                        Log.i("BureauAuth", "Auth failed due to ServerError");
+
+                        requestStatus.compareAndSet(0, 0);
+                    }else if(response.code() == 400)
+                    {
+                        Log.i("BureauAuth", "Auth failed due to possible wrong network");
+
                         requestStatus.compareAndSet(0, -1);
+
+                    }
+                    else if(response.code() == 422)
+                    {
+                        Log.i("BureauAuth", "Auth failed due to possible credential expiry");
+                        requestStatus.compareAndSet(0, 0);
+                    }
+                    else
+                    {
+                        Log.i("BureauAuth", "Auth failed due to unknown error");
+                        requestStatus.compareAndSet(0, 0);
+
+                    }
 
                 }
             });
@@ -301,8 +324,28 @@ public class BureauAuth {
                             requestStatus.compareAndSet(0, -3);
                             Log.i("BureauAuth", "Auth failed due to Authentication Exception");
 
-                        } else
+                        } else if(response.code() == 500) {
+                            Log.i("BureauAuth", "Auth failed due to ServerError");
+
+                            requestStatus.compareAndSet(0, 0);
+                        } else if(response.code() == 400)
+                        {
+                            Log.i("BureauAuth", "Auth failed due to possible wrong network");
+
                             requestStatus.compareAndSet(0, -1);
+
+                        }
+                        else if(response.code() == 422)
+                        {
+                            Log.i("BureauAuth", "Auth failed due to possible credential expiry");
+                            requestStatus.compareAndSet(0, 0);
+                        }
+                        else
+                        {
+                            Log.i("BureauAuth", "Auth failed due to unknown error");
+                            requestStatus.compareAndSet(0, 0);
+
+                        }
                     }
                 });
             }
@@ -355,14 +398,22 @@ public class BureauAuth {
     }
 
     private OkHttpClient buildHttpClient(Network network) {
-        return new OkHttpClient.Builder()
+        OkHttpClient.Builder okHttpClient =
+         new OkHttpClient.Builder()
                 .followRedirects(true)
                 .followSslRedirects(true)
                 .socketFactory(network.getSocketFactory())
                 .connectTimeout(timeoutInMs, TimeUnit.MILLISECONDS)
                 .writeTimeout(timeoutInMs, TimeUnit.MILLISECONDS)
-                .readTimeout(timeoutInMs, TimeUnit.MILLISECONDS)
-                .build();
+                .readTimeout(timeoutInMs, TimeUnit.MILLISECONDS);
+        if(this.mode ==Mode.Sandbox)
+        {
+            HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
+            logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+            okHttpClient.addInterceptor(logging);
+        }
+       return okHttpClient.build();
+
     }
 
     private HttpUrl buildInitiateUrl(String correlationId, long mobileNumber) {
