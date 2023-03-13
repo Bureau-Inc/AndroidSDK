@@ -53,7 +53,7 @@ public class BureauAuth {
         }
         this.clientId = clientId;
         if (timeoutInMs < 1) {
-            this.timeoutInMs = 4 * 1000; //4sec
+            this.timeoutInMs = 15 * 1000; //15sec
         } else {
             this.timeoutInMs = timeoutInMs;
         }
@@ -155,10 +155,10 @@ public class BureauAuth {
                     executorService.execute(() -> {
                         try {
                             Log.i("BureauAuth", "Android M trigger Auth");
-                            triggerAuthenticationFlow(correlationId, mobileNumber, activeNetworkInfo);
+                            triggerAuthenticationFlow(correlationId, mobileNumber, activeNetworkInfo, requestStatus);
                             sendEvent("direct available");
                             //Set status
-                            requestStatus.compareAndSet(0, 1); // 1: Completed
+                            // 1: Completed
                         } catch (AuthenticationException e) {
                             Log.e("BureauAuth", "Android M Auth Exception");
                             requestStatus.compareAndSet(0, -3); //-3 : ExceptionOnAuthenticate
@@ -208,7 +208,7 @@ public class BureauAuth {
             public void onAvailable(Network network) {
                 super.onAvailable(network);
                 try {
-                    triggerAuthenticationFlow(correlationId, mobileNumber, network);
+                    triggerAuthenticationFlow(correlationId, mobileNumber, network, requestStatus);
                     sendEvent("available");
                     requestStatus.compareAndSet(0, 1);
                 } catch (AuthenticationException e) {
@@ -236,7 +236,7 @@ public class BureauAuth {
                 super.onAvailable(network);
                 sendEvent("available");
                 try {
-                    triggerAuthenticationFlow(correlationId, mobileNumber, network);
+                    triggerAuthenticationFlow(correlationId, mobileNumber, network, requestStatus);
                     requestStatus.compareAndSet(0, 1);
                 } catch (AuthenticationException e) {
                     requestStatus.compareAndSet(0, -3);
@@ -261,21 +261,50 @@ public class BureauAuth {
     }
 
     private void waitForWorkflowCompletion(AtomicInteger requestStatus, Date startTime) {
+        Log.i("BureauAuth", "Current Timeout " + timeoutInMs + "You can override this through the SDK's API");
         while (requestStatus.get() == 0) {
             Date currentTime = new Date();
             long duration = currentTime.getTime() - startTime.getTime();
             if (duration >= (long) timeoutInMs) {
+                Log.i("BureauAuth", "SDK timed out at " + duration + "Ms");
                 break;
             }
         }
     }
 
-    private void triggerAuthenticationFlow(String correlationId, long mobileNumber, Network network) {
+    private void triggerAuthenticationFlow(String correlationId, long mobileNumber, Network network, AtomicInteger requestStatus) {
         try {
             OkHttpClient okHttpClient = buildHttpClient(network);
-            triggerInitiateFlow(correlationId, mobileNumber, okHttpClient);
+            triggerInitiateFlow(correlationId, mobileNumber, okHttpClient, new FlowCallback() {
+                @Override
+                public void onFlowComplete(Response response) {
+                    if (response.code() == 200) {
+                        requestStatus.compareAndSet(0, 1);
+                        Log.i("BureauAuth", "Auth Success");
+                    } else if (response.code() == 401) {
+                        requestStatus.compareAndSet(0, -3);
+                        Log.i("BureauAuth", "Auth failed due to Authentication Exception");
+                    } else
+                        requestStatus.compareAndSet(0, -1);
+
+                }
+            });
             if (useFinalize) {
-                triggerFinalizeFlow(correlationId, okHttpClient);
+                triggerFinalizeFlow(correlationId, okHttpClient, new FlowCallback() {
+                    @Override
+                    public void onFlowComplete(Response response) {
+                        if (response.code() == 200) {
+                            requestStatus.compareAndSet(0, 1);
+                            Log.i("BureauAuth", "Auth Success");
+
+                        } else if (response.code() == 401) {
+                            requestStatus.compareAndSet(0, -3);
+                            Log.i("BureauAuth", "Auth failed due to Authentication Exception");
+
+                        } else
+                            requestStatus.compareAndSet(0, -1);
+                    }
+                });
             }
         } catch (AuthenticationException e) {
             Log.i("BureauAuth", e.getMessage());
@@ -286,17 +315,17 @@ public class BureauAuth {
         }
     }
 
-    private void triggerFinalizeFlow(String correlationId, OkHttpClient okHttpClient) throws IOException {
+    private void triggerFinalizeFlow(String correlationId, OkHttpClient okHttpClient, FlowCallback flowCallback) throws IOException {
         HttpUrl url = buildFinalizeUrl(correlationId);
-        triggerFlow(url, okHttpClient);
+        triggerFlow(url, okHttpClient, flowCallback);
     }
 
-    private void triggerInitiateFlow(String correlationId, long mobileNumber, OkHttpClient okHttpClient) throws IOException {
+    private void triggerInitiateFlow(String correlationId, long mobileNumber, OkHttpClient okHttpClient, FlowCallback flowCallback) throws IOException {
         HttpUrl url = buildInitiateUrl(correlationId, mobileNumber);
-        triggerFlow(url, okHttpClient);
+        triggerFlow(url, okHttpClient, flowCallback);
     }
 
-    private void triggerFlow(HttpUrl url, OkHttpClient okHttpClient) throws IOException {
+    private void triggerFlow(HttpUrl url, OkHttpClient okHttpClient, FlowCallback flowCallback) throws IOException {
         Request request = new Request.Builder()
                 .url(url)
                 .get()
@@ -305,6 +334,7 @@ public class BureauAuth {
         Response response = null;
         try {
             response = call.execute();
+            flowCallback.onFlowComplete(response);
             closeResponse(response);
         } catch (IOException e) {
             closeResponse(response);
@@ -427,5 +457,9 @@ public class BureauAuth {
         public String getMessage() {
             return message;
         }
+    }
+
+    public interface FlowCallback {
+        void onFlowComplete(Response response);
     }
 }
