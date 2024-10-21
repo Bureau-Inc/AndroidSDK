@@ -372,6 +372,8 @@ public class BureauAuth {
         Request request = new Request.Builder()
                 .url(url)
                 .get()
+                .header("x-msisdn", "9913664366")
+                .header("x-imsi", "89918570400653061548")
                 .build();
         Call call = okHttpClient.newCall(request);
         Response response = null;
